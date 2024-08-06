@@ -1,0 +1,6 @@
+cluster.name: mycluster
+network.host: 0.0.0.0 
+http.port: 9200
+node.roles: []
+discovery.seed_hosts: []
+cluster.initial_cluster_manager_nodes: []

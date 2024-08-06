@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to launch an EC2 instance and run scripts
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+    Type: String
+  VolumeSize:
+    Description: Size of the EBS volume in GB
+    Type: Number
+    Default: 100
+  ImageId:
+    Description: The AMI ID for the EC2 instance
+    Type: String
+  InstanceType:
+    Description: The EC2 instance type
+    Type: String
+    Default: t3.micro
+    ConstraintDescription: Must be a valid EC2 instance type
+  OpenSearchVersion:
+    Description: The OpenSearch version 
+    Type: String
+    Default: 2.15.0
+  OpenSearchAdminPassword:
+    Description: The OpenSearch admin password 
+    Type: String
+  InstanceName:
+    Description: Name of the instance
+    Type: String
+    Default: ec2-opensearch-cluster
+  
+Resources:
+  InstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH and VMESS access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9200
+          ToPort: 9200
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance1:
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+      UserData: 
+        Fn::Base64: !Sub : ${CommonUserData}
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-1'
+  EC2Instance2:
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+      UserData: 
+        Fn::Base64: !Sub : ${CommonUserData}
+      Tags:
+        - Key: Name
+          Value: !Sub '${InstanceName}-2'
+
+
+Metadata:
+  CommonUserData: |
+    #!/bin/bash
+    wget -qO- https://github.com/chishui/OpenSearch/releases/download/2.15-test/run.sh | bash -s -- ${OpenSearchVersion} ${OpenSearchAdminPassword}
+
+Outputs:
+  Instance1Id:
+    Description: The ID of Instance1 
+    Value: !Ref EC2Instance1
+  Instance2Id:
+    Description: The ID of Instance2
+    Value: !Ref EC2Instance2
+  PublicIP:
+    Description: The Public IP address of the EC2 instance
+    Value: !GetAtt EC2Instance.PublicIp
